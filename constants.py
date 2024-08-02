@@ -1,0 +1,14 @@
+
+MARSUPIAL_HEIGHT = 3
+
+UAV_RADIUS = 1
+
+assert MARSUPIAL_HEIGHT > UAV_RADIUS, f"The UAV and the UGV are contained within the cylinder of height {MARSUPIAL_HEIGHT} and radious ´{UAV_RADIUS}"
+
+TETHER_LENGTH = 50
+
+HTOP = MARSUPIAL_HEIGHT-UAV_RADIUS
+
+EPSILON = 10**-6
+
+MAX_ITERS = 10**6
