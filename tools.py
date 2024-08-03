@@ -7,6 +7,7 @@ import time
 
 from constants import *
 from numpy.linalg import lstsq
+from pyvisgraph.visible_vertices import visible_vertices
 from scipy.spatial import ConvexHull
 from trimesh import intersections as tint
 
@@ -259,4 +260,32 @@ def get_obstacles_proj_vertices(ground_obs):
         ground_obs_vertices.append(new_vertices)
 
     return ground_obs_proj, ground_obs_vertices
+
+
+def pvisibility_2D(graph, T, L):
+
+    target = vg.Point(*T)
+    current_nodes = [target]
+    weights = {target:0}
+    previous = {target:None}
+    while len(current_nodes)!=0 and current_nodes[0].y > 0:
+        current = current_nodes.pop(0)
+        visible_points = visible_vertices(current, graph.graph)
+        for v in visible_points:
+            if not v in weights:
+                if v.y <= current.y and (current == target or is_icpc(v, current, previous[current])):
+                    new_weight = vpoint_euclidian_distance(v, current) + weights[current]
+                    if new_weight <= L:
+                        current_nodes.append(v)
+                        weights[v] = new_weight 
+                        previous[v] = current
+
+        current_nodes.sort(key=lambda x: x.y, reverse=True)
+
+    return weights, previous         
+
+
+def is_icpc(v1,v2,v3):
+    r = lineq(np.array([v1.x, v1.y]), np.array([v3.x, v3.y]))
+    return (v1.x <= v2.x <= v3.x or v1.x >= v2.x >= v3.x) and r(v2.x) >= v2.y
 
