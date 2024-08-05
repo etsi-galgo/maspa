@@ -5,7 +5,8 @@ This repository contains an algorithm for sequential path planning of a marsupia
 
 Details of the algorithm and the benchmark experiments can be seen in the publication:
 
-An efficient strategy for path planning with a tethered marsupial robotics system. J. Capitán, J. M. Díaz-Báñez, M. A. Pérez-Cutiño, F. Rodríguez and I. Ventura.
+"An efficient strategy for path planning with a tethered marsupial robotics system"
+J. Capitán, J. M. Díaz-Báñez, M. A. Pérez-Cutiño, F. Rodríguez and I. Ventura.
 
 ## Installation Guide and Usage
 
