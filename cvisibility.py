@@ -4,7 +4,6 @@ import numpy as np
 from cat2 import *
 from drawing import *
 from tools import *
-from planners import *
 
 
 def get_cvisible_tops(T, g_obs, a_obs, p, q, k_length):

@@ -263,7 +263,7 @@ if __name__ == "__main__":
     
     S1()
 
-    maspa_sequential(plot=False)
+    maspa_sequential(plot=True)
     # run_random_experiments(5,init=0)
 
 
