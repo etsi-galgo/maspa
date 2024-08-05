@@ -29,23 +29,15 @@ The `path_planning.py` file is the main file of the repository. It is used to co
 
 >path_planning_smpp: Compute ground and aerial paths for the marsupial system using MASPA and the visibility module.
 
-`
-path_planning_bf: MASPA without the visibility module.
-`
+>path_planning_bf: MASPA without the visibility module.
 
-`
-maspa_sequential: Use MASPA in a scenario with multiple sequential targets.
-`
+>maspa_sequential: Use MASPA in a scenario with multiple sequential targets.
 
 Use the `rrt_planning.py` file to compute the path planning baseline algorithm based on RRT*. The main functions are:
 
-`
-RRT_star: Path planning for the marsupial system using a variant of the RRT* algorithm
-`
+>RRT_star: Path planning for the marsupial system using a variant of the RRT* algorithm
 
-`
-rrt_sequential: Path planning in a scenario with multiple sequential targets using the RRT*-based baseline algorithm.
-`
+>rrt_sequential: Path planning in a scenario with multiple sequential targets using the RRT*-based baseline algorithm.
 
 Use the `constants.py` file to specify the height of the marsupial system on the ground, the radius of the UAV's height, the maximum length of the tether, the height of the take-off points, and the EPSILON value used to avoid numerical issues in the code.
 
