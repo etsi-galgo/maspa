@@ -1,5 +1,8 @@
 env
 .venv
 __pycache__
-images/*
-!images/.gitkeep
+
+.DS_Store
+.idea
+.vscode
+*.pyc
