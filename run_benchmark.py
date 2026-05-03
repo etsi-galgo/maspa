@@ -533,13 +533,15 @@ def example():
 
 
 
-def run_benchmark():
+def run_benchmark(n_runs=30):
+    # n_runs: number of independent runs per (scenario, algorithm) pair.
+    # Increase for statistically robust results (paper uses 30); set to 1 for a quick check.
     import os, contextlib
 
     SCENARIOS        = ["S2", "S3", "S5"]
     # SCENARIOS        = ["S3"]
     TIME_CHECKPOINTS = [10, 20]
-    N_RUNS           = 30
+    N_RUNS           = n_runs
     TOTAL_TIME       = 20   # seconds per (scenario, algorithm, run)
     k_length         = 26
     radius           = 10**6

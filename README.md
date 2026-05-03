@@ -2,7 +2,7 @@
 
 Code for the paper:
 
-> **"An efficient strategy for path planning with a tethered marsupial robotics system"**  
+> **"MASPA: An efficient strategy for path planning with a tethered marsupial robotics system"**  
 > J. Capitán, J. M. Díaz-Báñez, M. A. Pérez-Cutiño, F. Rodríguez and I. Ventura
 
 A marsupial robotic system consists of a UGV (ground robot) carrying a UAV (aerial robot) connected by a physical tether. MASPA computes paths for both robots jointly, minimising combined travel length while respecting the tether constraint.
@@ -39,23 +39,42 @@ Key dependencies: `numpy`, `matplotlib`, `scipy`, `pycatenary`, `pyvisgraph`, `t
 
 ```
 maspa/
-├── path_planning.py      # MASPA algorithm (main entry point)
-├── rrt_planning.py       # RRT* baseline algorithm
+├── maspa_planning.py     # MASPA algorithm entry point (SMPP and BF variants)
+├── run_benchmark.py      # RRT* baseline algorithms (RRT*, Informed RRT*, Smart RRT*)
+├── plot_comparison.py    # 3-D comparison plots — MASPA vs all RRT variants
+├── path_lengths.py       # Print path-length table from cached plot data
+├── time_to_beat_maspa.py # Measure how long each RRT variant takes to beat MASPA
+├── metrics.py            # Metrics over random experiments
 ├── generate_scenarios.py # Scenario construction and serialisation
-├── drawing.py            # 3D/2D visualisation and comparison plots
-├── metrics.py            # Path-length and timing metrics over random experiments
+├── drawing.py            # 3-D/2-D visualisation utilities
 ├── cvisibility.py        # Catenary-visibility module (candidate take-off points)
 ├── cat2.py               # Catenary computation and collision checking
 ├── tools.py              # Shared geometry utilities (Dijkstra, visibility graph, …)
+├── planners.py           # pyvisgraph-based Dijkstra planner
 ├── constants.py          # Physical parameters (tether length, robot height, …)
 ├── requirements.txt
-└── scenarios/            # Serialised scenarios and algorithm results (.pkl)
-    ├── S1.pkl            # Scenario 1 — column obstacles (single target)
-    ├── S2.pkl            # Scenario 2 — building + chimney (single target)
-    ├── S3.pkl            # Scenario 3 — building + balconies, revised (sequential)
-    ├── S5.pkl            # Scenario 5 — indoors crawded
-    ├── random_scenarios.pkl         # 1 000 random test instances
+├── reproduce_all.py      # One-shot script: runs everything end-to-end
+└── scenarios/            # Serialised scenarios and cached results (.pkl)
+    ├── S2.pkl                      # Scenario 2 — building + chimney (single target)
+    ├── S3.pkl                      # Scenario 3 — building + balconies (sequential)
+    ├── S5.pkl                      # Scenario 5 — indoor crowded (single target)
+    ├── S1_maspa.pkl                # Saved MASPA solution on S2
+    ├── S1_maspabf.pkl              # Saved MASPA-BF solution on S2
+    ├── S2_plot_data.pkl            # Cached comparison data for S2
+    ├── S3_plot_data.pkl            # Cached comparison data for S3
+    ├── S5_plot_data.pkl            # Cached comparison data for S5
+    └── random_scenarios.pkl        # 1 000 pre-generated random instances
 ```
+
+---
+
+## Scenarios
+
+| Scenario | Type | Description |
+|----------|------|-------------|
+| **S2** | Single target | Outdoor — building with a chimney. UGV navigates around the building; UAV must reach the chimney tip via a tethered catenary. |
+| **S3** | Sequential (2 targets) | Outdoor — building with two balconies at different heights. MASPA is run sequentially for each target. |
+| **S5** | Single target | Indoor crowded — obstacles occupy most of the space, leaving a narrow feasible region. |
 
 ---
 
@@ -63,146 +82,170 @@ maspa/
 
 ### MASPA — with catenary-visibility module
 
-`path_planning_smpp` in `path_planning.py`
+`path_planning_smpp` in `maspa_planning.py`
 
 1. Divide the space around the target into `p` vertical planes.
 2. In each plane, sample `q` candidate take-off points at the circle of radius `sqrt(L² − (h_T − h_UGV)²)`.
-3. Filter candidates using the **visibility module** (`cvisibility.py`): retain only points from which a collision-free catenary exists to the target.
-4. Run a multi-target variant of **Dijkstra** on the ground visibility graph to find the take-off point minimising ground-path length + aerial-path length.
+3. Filter candidates using the **catenary-visibility module** (`cvisibility.py`): retain only points from which a collision-free catenary exists to the target.
+4. Run a multi-target variant of **Dijkstra** on the ground visibility graph to find the take-off point that minimises ground-path length + aerial-path length.
 
 ### MASPA-BF — brute force (no visibility module)
 
-`path_planning_bf` in `path_planning.py`
+`path_planning_bf` in `maspa_planning.py`
 
-Same as MASPA but skips the visibility filter: all `p × q` candidate points are tested for a valid catenary. Slower but produces identical optimal solutions — used to verify the visibility module's correctness.
+Same as MASPA but skips the visibility filter: all `p × q` candidates are tested for a valid catenary. Produces identical optimal solutions — used to verify the visibility module's correctness.
 
 ### RRT* — randomised baseline
 
-`RRT_star` in `rrt_planning.py`
+`RRT_star` in `run_benchmark.py`
 
-A variant of the RRT* algorithm adapted to the marsupial problem. The graph is built in 2D (ground plane); when a new node falls within tether reach of the target, a catenary check is performed. The algorithm runs for a fixed time budget (`time_for_ending` seconds) or until a path shorter than a threshold is found.
+Standard RRT* adapted to the marsupial problem. The tree grows in the 2-D ground plane; when a node falls within tether reach of the target a catenary check is performed. Runs for a fixed time budget.
+
+### Informed RRT* — ellipsoidal sampling
+
+`Informed_RRT_star` in `run_benchmark.py`
+
+Once a solution is found, sampling is restricted to the prolate hyperellipsoid defined by (start, target, current best cost), pruning regions that cannot improve the solution (Gammell et al., IROS 2014).
+
+### Smart RRT* — path-biased sampling
+
+`Smart_RRT_star` in `run_benchmark.py`
+
+After a solution is found, a fraction `p_smart` of samples are drawn near the current best ground-path waypoints (Gaussian perturbation), causing the tree to refine from within rather than exploring blindly (Nasir et al., 2013).
 
 ---
 
 ## Reproducing All Results
 
+### Quick start — run everything at once
 
-### 1. Regenerate scenario files
+```bash
+python reproduce_all.py
+```
+
+This script executes all steps below in order, skipping scenario generation if the files already exist.
+
+---
+
+### Step-by-step
+
+#### 1. (Optional) Regenerate scenario files
+
+Pre-generated `.pkl` files are already committed. To regenerate from scratch:
 
 ```bash
 python generate_scenarios.py
 ```
 
-To regenerate S2, S3 or S5, uncomment the corresponding lines at the bottom of the file.
+#### 2. Run MASPA on S2 (single target)
 
-### 2. Run MASPA on the single-target scenario (S2)
-
-```python
-# In path_planning.py the S1() function runs S2.pkl
-python path_planning.py
+```bash
+python maspa_planning.py
 ```
 
-This runs `path_planning_smpp` selecting in the code the scenario `S2.pkl`, `S3.pkl`, or `S5.pkl`.
+By default `__main__` calls `example()`, which runs both `path_planning_smpp` and `path_planning_bf` on `scenarios/S2.pkl` and writes:
 
-To run MASPA-BF instead, uncomment the `path_planning_bf` call and comment out `path_planning_smpp` inside the `S1()` function:
-```python
-# path_planning_smpp(...)   ← comment out
-path_planning_bf(...)       # ← uncomment
+- `scenarios/S1_maspa.pkl`
+- `scenarios/S1_maspabf.pkl`
+
+To run the sequential variant (S3), edit `maspa_planning.py` and uncomment `maspa_sequential()` in `__main__`.
+
+#### 3. Run RRT baselines benchmark
+
+```bash
+python run_benchmark.py
 ```
 
-### 3. Run RRT* on the single-target scenario (S2)
+Runs **RRT\***, **Informed RRT\***, and **Smart RRT\*** on all three scenarios (S2, S3, S5). Default settings:
+
+- 30 runs per (scenario, algorithm) — adjustable via the `n_runs` parameter
+- 20 s time budget per run
+- Metrics reported at 10 s and 20 s checkpoints
+
+Output: a formatted table printed to stdout with `mean ± std (success rate)`.
+
+To run just once for a quick sanity check:
 
 ```python
-# In rrt_planning.py the example() function runs S2.pkl
-python rrt_planning.py
+from run_benchmark import run_benchmark
+run_benchmark(n_runs=1)
 ```
 
-Writes `scenarios/S1_rrt.pkl`.
+`reproduce_all.py` uses `n_runs=1` by default. Change `N_RUNS = 1` near the top of that file to `N_RUNS = 30` to reproduce the full paper statistics.
 
-### 4. Run MASPA on the sequential scenario (S3 revised)
+#### 4. Generate 3-D comparison plots
 
-```python
-python path_planning.py   # maspa_sequential() is called from __main__
+```bash
+python plot_comparison.py
 ```
 
-Writes `scenarios/S33_maspa.pkl`.
+Runs all four methods (MASPA + 3 RRT variants) on S2, S3, and S5 and saves:
 
-To run on the original S3, replace `scenarios/S3.pkl` with `scenarios/S3_original.pkl` inside `maspa_sequential`.
-
-### 5. Run RRT* on the sequential scenario (S3 revised)
-
-```python
-python rrt_planning.py    # rrt_sequential() is called from __main__
+```
+scenarios/S2_comparison.png
+scenarios/S3_comparison.png
+scenarios/S5_comparison.png
 ```
 
-Writes `scenarios/S33_rrt.pkl`.
+Results are cached in `scenarios/<name>_plot_data.pkl` — delete the cache file to force a fresh run.
 
-### 6. Plot comparison: MASPA vs RRT* (single-target, S2)
+#### 5. Print path-length table
 
-```python
-python drawing.py   # calls plot_S1() then plot_S2() from __main__
+```bash
+python path_lengths.py
 ```
 
-`plot_S1()` overlays the MASPA path (solid) and the RRT* path (dashed) in the same 3D scene for `S2`. Images are saved to `images/`.
+Reads the `_plot_data.pkl` caches and prints a table of total path lengths (ground + tether, with the return-trip multiplier applied for sequential targets).
 
-### 7. Plot comparison: MASPA vs RRT* (sequential, S3)
+Requires step 4 to have been run first.
 
-`plot_S2()` in `drawing.py` (also called from `__main__`) renders both algorithms on the sequential scenario.
+#### 6. Time to first beat MASPA
 
-### 8. Run random experiments
-
-```python
-# In path_planning.py, comment out S1() and maspa_sequential() and uncomment:
-run_random_experiments(5, init=0)
+```bash
+python time_to_beat_maspa.py
 ```
 
-Uses `scenarios/random_scenarios.pkl` (1 000 pre-generated instances) and writes results to `scenarios/random_results_16-30.pkl`.
+Runs each RRT variant once per scenario (no fixed budget, up to 600 s) and reports the exact second when it first produces a path shorter than MASPA, or "DNF" if it never does.
 
-To generate a new set of random instances:
-```python
-# In generate_scenarios.py, uncomment:
-get_random_scenarios(1000, ground_n=10, aerial_n=15, block_thick=5,
-                     board_size=(50,50,40), path="scenarios/random_scenarios.pkl")
-```
+Requires step 4 (cache files).
 
-### 9. Compute metrics on random experiments
+#### 7. Compute metrics on random experiments
 
 ```bash
 python metrics.py
 ```
 
-Reports mean and standard deviation of ground-path length, aerial-path length, total path length, and computation time over all random instances in `scenarios/random_results_16-30.pkl`.
+Reads `scenarios/random_results_final.pkl` and reports mean ± std of ground-path length, aerial-path length, total path length, and computation time.
+
+To regenerate random results, edit `maspa_planning.py` and call `run_random_experiments(1000)` from `__main__`. A new set of 1 000 random instances can be generated from `generate_scenarios.py`.
 
 ---
 
 ## Comparison of Approaches
 
-### Single-target scenario (S2 — building + chimney)
+### Single-target scenarios (S2, S5)
 
-| Algorithm | Ground path | Aerial path | Total | Time (s) |
-|-----------|------------|-------------|-------|----------|
-| MASPA (p=16, q=30) | see `S1_maspa.pkl` | see `S1_maspa.pkl` | optimal | fast |
-| MASPA-BF (p=16, q=30) | same as MASPA | same as MASPA | optimal | slower |
-| RRT* | near-optimal | near-optimal | variable | 20 s budget |
+| Algorithm | Path cost formula |
+|-----------|-------------------|
+| MASPA / MASPA-BF | `d(S→X) + d(X→T)` — guaranteed optimal for the sampled candidate set |
+| RRT* | probabilistic; quality improves with time budget |
+| Informed RRT* | faster convergence than RRT* via ellipsoidal pruning |
+| Smart RRT* | path-biased refinement after first solution |
 
-MASPA and MASPA-BF always produce the same optimal solution; MASPA is faster because the visibility module prunes infeasible candidates before the catenary check. RRT* is probabilistic: solution quality varies between runs and is not guaranteed optimal.
+### Sequential scenario (S3)
 
-### Sequential scenario (S3 revised — building + balconies)
+| Algorithm | Path cost formula |
+|-----------|-------------------|
+| MASPA | `d(S→X1) + 2·d(X1→T1) + d(X1→X2) + 2·d(X2→T2)` |
+| RRT variants | same formula; each target solved independently with its own time budget |
 
-| Algorithm | Total length | Time (s) |
-|-----------|-------------|----------|
-| MASPA | see `S33_maspa.pkl` | fast |
-| RRT* | see `S33_rrt.pkl` | 2 × 20 s budget |
-
-### Random experiments (p=16, q=30, 1 000 instances)
-
-Run `python metrics.py` after completing step 8 above to reproduce the aggregated statistics reported in the paper.
+Run `python path_lengths.py` (after `plot_comparison.py`) to see exact numbers.
 
 ### Key observations
 
-- **Visibility module**: MASPA consistently outperforms MASPA-BF in computation time with identical solution quality, confirming that the catenary-visibility filter is effective at pruning the candidate set.
-- **vs RRT***: MASPA produces shorter paths in significantly less time on structured scenarios. RRT* occasionally finds competitive paths but requires a large iteration budget and is sensitive to the random seed.
-- **Sequential extension**: the UGV reuse pattern (the UGV drives to the take-off point, waits, then continues to the next target) makes MASPA's greedy-sequential strategy near-optimal because each sub-problem is solved optimally.
+- **Visibility module**: MASPA consistently outperforms MASPA-BF in computation time with identical solution quality, confirming the catenary-visibility filter is effective.
+- **vs RRT variants**: MASPA produces shorter paths in significantly less time on all three scenarios. Informed and Smart RRT* improve over vanilla RRT* but rarely match MASPA within a 20 s budget.
+- **Sequential extension**: solving each sub-problem optimally with MASPA gives a near-optimal sequential strategy.
 
 ---
 
@@ -218,4 +261,4 @@ Edit `constants.py` to change physical parameters:
 | `EPSILON` | 1e-6 | Numerical tolerance |
 | `MAX_ITERS` | 1e6 | Max iterations for random scenario generation |
 
-Algorithm parameters `p` (number of vertical planes), `q` (samples per plane), and `k_length` (catenary length discretisation steps) are set per scenario in `path_planning.py` and `rrt_planning.py`. The paper uses `p=16, q=30, k_length=26`.
+Algorithm parameters `p` (number of vertical planes), `q` (samples per plane), and `k_length` (catenary length discretisation steps) are set per call in `maspa_planning.py` and `run_benchmark.py`. The paper uses `p=16, q=30, k_length=26`.

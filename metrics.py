@@ -55,7 +55,7 @@ def compute_metrics_random_exp2():
     # ]
 
     paths = [
-        "scenarios/random_results_extended.pkl",
+        "scenarios/random_results_final.pkl",
     ]
 
 
