@@ -44,9 +44,18 @@ def dict_append_value(d, key, val):
 
 def compute_metrics_random_exp2():
     
-    
+    # paths = [
+    #     "scenarios/random_results_1-17.pkl",
+    #     "scenarios/random_results_18-25.pkl",
+    #     "scenarios/random_results_25-32.pkl",
+    #     "scenarios/random_results_32-34.pkl",
+    #     "scenarios/random_results_34-75.pkl",
+    #     "scenarios/random_results_75-100.pkl",
+    #     "scenarios/random_results_100-107.pkl",
+    # ]
+
     paths = [
-        "scenarios/random_results_16-30.pkl",
+        "scenarios/random_results_extended.pkl",
     ]
 
 

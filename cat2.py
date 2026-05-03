@@ -15,12 +15,21 @@ def get_min_catenary_rectangles(top, T, obstacles, Lmin, Lmax, k_length, col2 = 
     '''
 
     tt = 0
+    # Compute Lmin the same way pycatenary does internally (split h/v) to avoid
+    # floating-point mismatch that causes "length inferior to distance" RuntimeError.
+    f_vec = T - top
+    dh = np.sqrt(f_vec[0]**2 + f_vec[1]**2)
+    dv = abs(f_vec[2])
+    Lmin = np.sqrt(dh**2 + dv**2)
     for l in np.linspace(Lmin + EPSILON, Lmax - EPSILON, k_length):
-        
+
         a = [0,0,0]
         f = T - top
-        l1 = cable.MooringLine(L=l, w=0, EA=None, anchor=a, fairlead=f, floor=False)        
-        l1.computeSolution()
+        l1 = cable.MooringLine(L=l, w=0, EA=None, anchor=a, fairlead=f, floor=False)
+        try:
+            l1.computeSolution()
+        except RuntimeError:
+            continue
 
         xyzs = []
         for s in np.linspace(0., l):

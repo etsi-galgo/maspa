@@ -4,38 +4,33 @@ import numpy as np
 from cat2 import *
 from drawing import *
 from tools import *
+from planners import *
 
 
 def get_cvisible_tops(T, g_obs, a_obs, p, q, k_length):
-    """
-    Compute a set of catenary-visible points in the space using p vertical planes and a sampling
-    of q points per plane
-    """
-
-    # Divide the space in p vertical planes
+    
     T_proj = np.array([T[0], T[1], HTOP])
     cradius = get_top_circ_radious(T)
+
     vplanes, tt = get_vertical_planes(T, T_proj, cradius, p, g_obs, a_obs)
 
     tops3D = {}
     for vp in vplanes:
         tops = get_take_off_points(cradius, vp, q)
+        # CHECKPOINT #  plot_vertical_plane(vp,T,tops) 
 
-        # Get the catenary-visible point in each plane
         cvis_tops, ti = get_cvisible_tops2D(vp, tops, T, k_length)
         tt += ti
 
         if cvis_tops != None:
-            tops3D.update(cvis_tops)        
+            tops3D.update(cvis_tops)  
+
+    print("tops:", len(tops3D))      
 
     return tops3D, tt
 
 
 def get_tops_bf(T, g_obs, a_obs, p, q, k_length):
-    """
-    Compute a set of catenary-visible points in the space without using the visibility module
-    """
-
     
     T_proj = np.array([T[0], T[1], HTOP])
     cradius = get_top_circ_radious(T)
@@ -51,12 +46,14 @@ def get_tops_bf(T, g_obs, a_obs, p, q, k_length):
             minL = euclidian_distance(top, T)
             cat_points, length, t = get_min_catenary_rectangles(top, T, vp["ground_obstacles"]+vp["aerial_obstacles"], minL, TETHER_LENGTH, k_length, col2=True)
             tt += t
+            # CHECKPOINT #  plot_3Dtether(top, T, cat_points, obstacles)
 
             if length > 0 and not math.isnan(cat_points[0][0]):
                 tops_cat[tuple(top)] = {"length": length, "tether": cat_points} 
     
             tops3D.update(tops_cat)
 
+    print("tops:", len(tops3D))      
 
     return tops3D, tt
 
@@ -124,11 +121,14 @@ def get_cvisible_tops2D(vplane, tops, T, k_length):
     except:
         return None, tt
 
+    # CHECKPOINT # plot_visibility_graph(visgraph, obs_proj)
 
     try:
         weights, previous = pvisibility_2D(visgraph, T_proj, TETHER_LENGTH)
     except:
         return None, tt
+
+    # CHECKPOINT # plot_polygonal_paths(weights, previous, [top[0] for top in tops_proj], T_proj, obs_proj)
 
     tops_cat = {}
     
@@ -136,8 +136,10 @@ def get_cvisible_tops2D(vplane, tops, T, k_length):
         vtop = vg.Point(top[c0], top[c1]) 
         if vtop in weights:
             minL = max(weights[vtop], euclidian_distance(top, T))
+            # cat_points, length, t = get_min_catenary(top, T, obstacles, minL, TETHER_LENGTH, k_length, k_collision)
             cat_points, length, t = get_min_catenary_rectangles(top, T, obstacles, minL, TETHER_LENGTH, k_length)
             tt += t
+            # CHECKPOINT #  plot_3Dtether(top, T, cat_points, obstacles)
 
             if length > 0 and not math.isnan(cat_points[0][0]):
                 tops_cat[tuple(top)] = {"length": length, "tether": cat_points} 

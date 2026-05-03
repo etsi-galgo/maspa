@@ -11,6 +11,8 @@ import time
 
 from collections import deque
 from matplotlib import collections  as mc
+from random import random
+from scipy import linalg
 
 from cat2 import *
 from constants import *
@@ -98,8 +100,8 @@ def RRT_star(startpos, T, ground_obs, aerial_obs, radius, k_length, n_iter=2*10*
     feasible_dist = math.sqrt(TETHER_LENGTH**2 - (endpos[-1]-MARSUPIAL_HEIGHT)**2) 
     init_t = time.time()
     iter = 0
-    while iter < n_iter and time.time() - init_t < time_for_ending:
-    # while True:
+    # while iter < n_iter and time.time() - init_t < time_for_ending:
+    while True:
 
         d, newidx, parentidx = G.randomPosition(BOARD_SHAPE[:2], gobs_4planning, radius)
         
@@ -293,7 +295,7 @@ def rrt_sequential(plotting=False):
         "opt_tops": opt_tops
     }
 
-    with open("scenarios/S33_rrt.pkl", "wb") as f:
+    with open("scenarios/S3_rrt.pkl", "wb") as f:
         f.write(pkl.dumps(d))
 
 
@@ -344,9 +346,9 @@ def example():
 
 if __name__ == '__main__':
 
-    # example()
+    example()
 
-    rrt_sequential(plotting=False)
+    # rrt_sequential(plotting=False)
                 
             
             

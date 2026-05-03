@@ -7,7 +7,6 @@ import time
 
 from constants import *
 from numpy.linalg import lstsq
-from pyvisgraph.visible_vertices import visible_vertices
 from scipy.spatial import ConvexHull
 from trimesh import intersections as tint
 
@@ -164,16 +163,22 @@ def upd_dijkstra_algorithm(start_node, goals, other_vertices, obstacles, visibil
 # Given the numerical problems of pyvisgraph we must implement our own visibility
 def is_visible(P1, P2, obstacles):
     
+    # import matplotlib.pyplot as plt
+    # plt.plot([P1[0], P2[0]], [P1[1], P2[1]], "ok")
     for obs in obstacles:
         
         for i in range(len(obs)): 
             for j in range(i+1, len(obs)): 
         
+                # plt.plot([obs[i][0], obs[j][0]], [obs[i][1], obs[j][1]], "-k")
+
                 if do_intersect(obs[i], obs[j], P1, P2):
                     # plt.title("False")
                     # plt.show()
                     return False
 
+    # plt.title("True")
+    # plt.show()
     return True
 
 
@@ -202,6 +207,9 @@ def on_segment(p, q, r):
 
 def do_intersect(p1, q1, p2, q2):
     """Return True if line segments 'p1q1' and 'p2q2' intersect."""
+    # Find the four orientations needed for the general and special cases
+    
+    # if p1 == q1 or p1 == q2 or p1 == q1 or p1 == q2
     
     o1 = orientation(p1, q1, p2)
     o2 = orientation(p1, q1, q2)
@@ -236,6 +244,7 @@ def do_intersect(p1, q1, p2, q2):
 def get_obstacles_proj_vertices(ground_obs):
 
     ground_obs_proj, ground_obs_vertices = [], []
+    # sec_dist = math.sqrt(UAV_RADIUS/2)
     sec_dist = EPSILON
     for obs in ground_obs:
         xmin = min(obs, key=lambda x: x[0])[0]
@@ -260,32 +269,4 @@ def get_obstacles_proj_vertices(ground_obs):
         ground_obs_vertices.append(new_vertices)
 
     return ground_obs_proj, ground_obs_vertices
-
-
-def pvisibility_2D(graph, T, L):
-
-    target = vg.Point(*T)
-    current_nodes = [target]
-    weights = {target:0}
-    previous = {target:None}
-    while len(current_nodes)!=0 and current_nodes[0].y > 0:
-        current = current_nodes.pop(0)
-        visible_points = visible_vertices(current, graph.graph)
-        for v in visible_points:
-            if not v in weights:
-                if v.y <= current.y and (current == target or is_icpc(v, current, previous[current])):
-                    new_weight = vpoint_euclidian_distance(v, current) + weights[current]
-                    if new_weight <= L:
-                        current_nodes.append(v)
-                        weights[v] = new_weight 
-                        previous[v] = current
-
-        current_nodes.sort(key=lambda x: x.y, reverse=True)
-
-    return weights, previous         
-
-
-def is_icpc(v1,v2,v3):
-    r = lineq(np.array([v1.x, v1.y]), np.array([v3.x, v3.y]))
-    return (v1.x <= v2.x <= v3.x or v1.x >= v2.x >= v3.x) and r(v2.x) >= v2.y
 

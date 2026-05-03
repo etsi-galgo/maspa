@@ -53,55 +53,8 @@ maspa/
     ├── S1.pkl            # Scenario 1 — column obstacles (single target)
     ├── S2.pkl            # Scenario 2 — building + chimney (single target)
     ├── S3.pkl            # Scenario 3 — building + balconies, revised (sequential)
-    ├── S3_original.pkl   # Scenario 3 — original version
-    ├── S1_maspa.pkl      # MASPA result on S2
-    ├── S1_maspabf.pkl    # MASPA-BF result on S2
-    ├── S1_rrt.pkl        # RRT* result on S2
-    ├── S3_maspa.pkl      # MASPA result on S3 original
-    ├── S3_rrt.pkl        # RRT* result on S3 original
-    ├── S33_maspa.pkl     # MASPA result on S3 revised
-    ├── S33_rrt.pkl       # RRT* result on S3 revised
+    ├── S5.pkl            # Scenario 5 — indoors crawded
     ├── random_scenarios.pkl         # 1 000 random test instances
-    └── random_results_16-30.pkl     # MASPA results on random instances (p=16, q=30)
-```
-
----
-
-## Scenarios
-
-All scenarios share the same structure: a UGV start position **S**, one or more UAV target positions **T**, ground obstacles (navigable at height `MARSUPIAL_HEIGHT`), and aerial obstacles.
-
-### Scenario 1 — Column obstacles (`S1.pkl`)
-
-Four column-like obstacles arranged in two groups. Single target. Used to validate the catenary-visibility module in isolation.
-
-Generate:
-```bash
-# In generate_scenarios.py, uncomment generate_S1("scenarios/S1.pkl")
-python generate_scenarios.py
-```
-
-### Scenario 2 — Building with chimney (`S2.pkl`)
-
-Two parallel walls forming a corridor with a roof and four chimney-like aerial obstacles rising above it. The UAV target is inside the chimney gap at height `5.2h`. Single target.
-
-Generate:
-```bash
-# In generate_scenarios.py, uncomment generate_S2("scenarios/S2.pkl")
-python generate_scenarios.py
-```
-
-### Scenario 3 — Building with balconies (`S3.pkl`)
-
-A large walled building with a central raised block and two balcony ledges at height `8h`, plus connecting wall segments. Two sequential UAV targets symmetrically placed at height `12h` on opposite sides of the building. The UGV must navigate outside the building perimeter.
-
-Two versions exist:
-- **S3 original** (`S3_original.pkl`) — balconies at x = 5, targets at (6, 30, 12h) and (64, 30, 12h).
-- **S3 revised / S33** (current `S3.pkl`) — balconies shifted inward to x = 10, targets moved inward to (15, 34, 12h) and (55, 34, 12h), creating a harder instance with less clearance around the balconies.
-
-Generate the current (revised) version:
-```bash
-python generate_scenarios.py   # runs generate_S33("scenarios/S3.pkl") by default
 ```
 
 ---
@@ -133,7 +86,6 @@ A variant of the RRT* algorithm adapted to the marsupial problem. The graph is b
 
 ## Reproducing All Results
 
-Run all commands from the `maspa/` directory.
 
 ### 1. Regenerate scenario files
 
@@ -141,7 +93,7 @@ Run all commands from the `maspa/` directory.
 python generate_scenarios.py
 ```
 
-By default this regenerates `S3.pkl` (revised scenario). To regenerate S1 or S2, uncomment the corresponding lines at the bottom of the file.
+To regenerate S2, S3 or S5, uncomment the corresponding lines at the bottom of the file.
 
 ### 2. Run MASPA on the single-target scenario (S2)
 
@@ -150,7 +102,7 @@ By default this regenerates `S3.pkl` (revised scenario). To regenerate S1 or S2,
 python path_planning.py
 ```
 
-This runs `path_planning_smpp` on `scenarios/S2.pkl` and writes `scenarios/S1_maspa.pkl`.
+This runs `path_planning_smpp` selecting in the code the scenario `S2.pkl`, `S3.pkl`, or `S5.pkl`.
 
 To run MASPA-BF instead, uncomment the `path_planning_bf` call and comment out `path_planning_smpp` inside the `S1()` function:
 ```python

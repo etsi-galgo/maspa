@@ -22,12 +22,12 @@ def plot_scenario(scenario, path=None):
         scenario["ground_obstacles"]+scenario["aerial_obstacles"], path_to_output=path)
 
 
-def plot_scenario_multitarget(scenario, path=None):
+def plot_scenario_multitarget(scenario, path=None, show=False):
     
     targets = [
         {
             "point":ti, 
-            "label":f"T{i+1}", "color":"k"
+            "label":f"T{i+1}", "color":"r"
         }  for i, ti in enumerate(scenario["T"])] 
 
     plot3D([
@@ -35,11 +35,12 @@ def plot_scenario_multitarget(scenario, path=None):
             "point":scenario["S"], 
             "label":"S", "color":"k"
         }] + targets, 
-        scenario["ground_obstacles"]+scenario["aerial_obstacles"], path_to_output=path, show=True)
+        scenario["ground_obstacles"]+scenario["aerial_obstacles"], path_to_output=path, show=show)
 
 
-def plot3D(points, obstacles, path_to_output=None, tops=None, ground_paths=None, show=None, marker=None, figax=None, alpha=0.05):
+def plot3D(points, obstacles, path_to_output=None, tops=None, ground_paths=None, show=None, marker=None, figax=None):
 
+    # 8 points defining the cube corners
     if not figax:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
@@ -50,13 +51,17 @@ def plot3D(points, obstacles, path_to_output=None, tops=None, ground_paths=None,
         
         hull = ConvexHull(pts)
 
+        # Plot defining corner points
         ax.plot(pts.T[0], pts.T[1], pts.T[2], ".k", markersize=2)
 
+        # 12 = 2 * 6 faces are the simplices (2 simplices per square face)
         for s in hull.simplices:
-            s = np.append(s, s[0])
+            s = np.append(s, s[0])  # Here we cycle back to the first coordinate
+            # ax.plot(pts[s, 0], pts[s, 1], pts[s, 2], "r-")
             verts = [list(zip(pts[s, 0],pts[s, 1],pts[s, 2]))]
-            ax.add_collection3d(Poly3DCollection(verts, alpha=alpha))
+            ax.add_collection3d(Poly3DCollection(verts, alpha=0.02))
 
+        # Make axis label
         for i in ["x", "y", "z"]:
             eval("ax.set_{:s}label('{:s}')".format(i, i))
 
@@ -66,15 +71,14 @@ def plot3D(points, obstacles, path_to_output=None, tops=None, ground_paths=None,
 
     if tops:
         for top, values in tops.items():
-            ax.plot([top[0]], [top[1]], [0], "or", label="top")
+            ax.plot([top[0]], [top[1]], [0], "og", label="top")
             tether = values["tether"]
-            ax.plot(tether[:,0], tether[:,1], tether[:,2], marker+"b", label="aerial path")
-            ax.plot(tether[0,0], tether[0,1], tether[0,2], "ob", label="aerial path")
+            ax.plot(tether[:,0], tether[:,1], tether[:,2], marker+"r", label="aerial path")
 
     if ground_paths:
         for gp in ground_paths:
             for i in range(len(gp)-1):
-                ax.plot([gp[i][0], gp[i+1][0]], [gp[i][1], gp[i+1][1]], [0,0], marker+"r", label="ground_path")
+                ax.plot([gp[i][0], gp[i+1][0]], [gp[i][1], gp[i+1][1]], [0,0], marker+"g", label="ground_path")
 
     # plt.legend()
 
@@ -115,10 +119,12 @@ def plot2D(title, points, obstacles, tops, coords=None, path_to_output=None):
         ptsz = pts[:,coords[1]]  
         
         hull = ConvexHull(list(zip(ptsx,ptsz)))
+
+        # Plot defining corner points
         plt.plot(ptsx, ptsz, "k")
 
         for s in hull.simplices:
-            s = np.append(s, s[0]) 
+            s = np.append(s, s[0])  # Here we cycle back to the first coordinate
             ax.fill(pts[s, 0], pts[s, 1])
 
     for d in points:
@@ -232,7 +238,7 @@ def plot_dijkstra_graph(S, previous, obstacles):
     plt.show()
 
 
-def plot_optimal_solution(S, T, min_ctop, ground_path, ground_obs, aerial_obs, show=True, marker="-", figax=None, alpha=0.1):
+def plot_optimal_solution(S, T, min_ctop, ground_path, ground_obs, aerial_obs, show=True, marker="-", figax=None):
     
     return plot3D([
         {
@@ -241,15 +247,14 @@ def plot_optimal_solution(S, T, min_ctop, ground_path, ground_obs, aerial_obs, s
         }, 
         {
             "point":T, 
-            "label":"T", "color":"k"
+            "label":"T", "color":"r"
         }], 
         ground_obs + aerial_obs, 
         tops=min_ctop,
         ground_paths=[ground_path],
         show=show, 
         marker=marker,
-        figax = figax,
-        alpha=alpha)
+        figax = figax)
 
 
 def plot_S1():
@@ -264,22 +269,27 @@ def plot_S1():
     with open("scenarios/S1_maspa.pkl", "rb") as f:
         maspa_sol = pkl.loads(f.read())
     
+    # print("maspa", maspa_sol)
+    # print("rrt", rrt_sol)
+
     S = maspa_sol["S"]
     T = maspa_sol["T"]
     ground_path = maspa_sol["ground_path"]
     opt_ctop = maspa_sol["opt_ctop"]
     
-    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, show=False, alpha=0.05)
+    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, show=False)
 
     with open("scenarios/S1_rrt.pkl", "rb") as f:
         rrt_sol = pkl.loads(f.read())
     
+    # print("rrt", rrt_sol)
+
     S = rrt_sol["S"]
     T = rrt_sol["T"]
     ground_path = rrt_sol["ground_path"]
     opt_ctop = rrt_sol["opt_ctop"]
     
-    plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", figax=figax, alpha=0.05)
+    plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", figax=figax)
 
 
 def plot_S2():
@@ -302,14 +312,14 @@ def plot_S2():
     ground_path = maspa_sol["gpaths"][0]
     opt_ctop = maspa_sol["opt_tops"][0]
     
-    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="-", show=False, alpha=0.01)
+    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="-", show=False)
 
     S = ground_path[-1]
     T = maspa_sol["Ts"][1]
     ground_path = maspa_sol["gpaths"][1]
     opt_ctop = maspa_sol["opt_tops"][1]
     
-    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="-", show=False, figax=figax, alpha=0.01)
+    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="-", show=False, figax=figax)
 
     with open("scenarios/S3_rrt.pkl", "rb") as f:
         rrt_sol = pkl.loads(f.read())
@@ -322,7 +332,7 @@ def plot_S2():
     ground_path = rrt_sol["gpaths"][0]
     opt_ctop = rrt_sol["opt_tops"][0]
     
-    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", show=False, figax=figax, alpha=0.01)
+    figax = plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", show=False, figax=figax)
 
     S = [*ground_path[-1], 0]
     T = rrt_sol["Ts"][1]
@@ -333,11 +343,11 @@ def plot_S2():
     plot3D([
         {
             "point":S, 
-            "label":"S", "color":"r"
+            "label":"S", "color":"g"
         }, 
         {
             "point":T, 
-            "label":"T", "color":"k"
+            "label":"T", "color":"r"
         }], 
         gobs + aobs, 
         tops=opt_ctop,
@@ -346,7 +356,7 @@ def plot_S2():
         marker="--",
         figax = figax)
     
-    plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", show=True, figax=figax, alpha=0.01)
+    # plot_optimal_solution(S, T, opt_ctop, ground_path, gobs, aobs, marker="--", show=True, figax=figax)
 
 
 
@@ -355,4 +365,4 @@ if __name__ == "__main__":
     
     plot_S1()
 
-    plot_S2()
+    # plot_S2()
